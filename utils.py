@@ -4,14 +4,6 @@ import os
 
 ROOT_FOLDER = ""
 
-
-def get_string_representation(contents):
-    border_len = len(max(contents, key=lambda x: len(x)))
-    bordered_contents = ["| " + txt.ljust(border_len) + " |" for txt in contents]
-    string_rep = "\n" + "="*(border_len+4)+ "\n" + "\n".join(bordered_contents) + "\n"+ "="*(border_len+4) + "\n"
-    return string_rep
-
-
 def log(fname, msg):
     fname = os.path.join(ROOT_FOLDER, f"logs/{fname}.log")
     logging.basicConfig(filename=fname, level=logging.INFO)
@@ -19,6 +11,24 @@ def log(fname, msg):
     msg = current_ts+"::"+msg
     logging.info(msg+"\n")
     print("\n",msg,"\n")
+
+
+def get_string_representation(contents):
+    max_len = 70
+    processed_contents = []
+    for content in contents:
+        if len(content)>max_len:
+            chunks = [content[i:i+max_len] for i in range(0, len(content), max_len)]
+            processed_contents.extend(chunks)
+        else:
+            processed_contents += [content]
+
+    border_len = len(max(processed_contents, key=lambda x: len(x)))
+    bordered_contents = ["| " + txt.ljust(border_len) + " |" for txt in processed_contents]
+    border_len = len(max(contents, key=lambda x: len(x)))
+    bordered_contents = ["| " + txt.ljust(border_len) + " |" for txt in contents]
+    string_rep = "\n" + "="*(border_len+4)+ "\n" + "\n".join(bordered_contents) + "\n"+ "="*(border_len+4) + "\n"
+    return string_rep
 
 
 
