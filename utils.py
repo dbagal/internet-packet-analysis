@@ -4,6 +4,18 @@ import os
 
 ROOT_FOLDER = ""
 
+def get_bits(bytes, byteorder="big"):
+        bits = []
+        if byteorder=="big":
+            bit_indices = range(7,-1,-1)
+        elif byteorder=="little":
+            bit_indices = range(0,8)
+
+        for byte in bytes:
+            bits += [(byte>>i)&1 for i in bit_indices]
+
+        return bits
+
 def log(fname, msg):
     fname = os.path.join(ROOT_FOLDER, f"logs/{fname}.log")
     logging.basicConfig(filename=fname, level=logging.INFO)
