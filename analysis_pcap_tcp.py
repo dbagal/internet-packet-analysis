@@ -92,7 +92,6 @@ class TCPSegment:
         self.payload = segment_bytes[20:]
         self.payload_size = len(segment_bytes[20:])
         self.timestamp = float(ts)
-        self.bytes = segment_bytes
 
 
 

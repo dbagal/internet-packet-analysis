@@ -7,10 +7,10 @@ class HTTPPCapAnalyzer:
 
     @staticmethod
     def get_http_packet_type(tcp_payload):
-        if len(tcp_payload)>32:
+        if len(tcp_payload)>12:
 
             chars = []
-            for i in range(32,36):
+            for i in range(12,16):
                 chars += [unpack(">s", tcp_payload[i:i+1])]
 
             initial_chars = ""
@@ -28,22 +28,19 @@ class HTTPPCapAnalyzer:
                 return None
         
 
-
     @staticmethod
     def reassemble_http_non_pipelined_request_responses(connections):
         reassembled_req_response = []
         for connection in connections:
             http_packets = []
-            num_requests = 0
             for segment in connection.segments:
-                packet_type = HTTPPCapAnalyzer.get_http_packet_type(segment.bytes)
+                packet_type = HTTPPCapAnalyzer.get_http_packet_type(segment.payload)
 
                 if packet_type == "request" :
-                    http_packets += [[segment, []]]
-                    num_requests += 1
+                    http_packets.append([segment, []])
 
-                elif packet_type == "response" and num_requests != 0:
-                    http_packets[num_requests-1][-1] += [segment]
+                elif packet_type == "response":
+                    http_packets[-1][-1] += [segment]
             
             reassembled_req_response += [http_packets]
 
