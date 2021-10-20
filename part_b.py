@@ -1,7 +1,4 @@
 from analysis_pcap_tcp import *
-import traceback
-from pretty_print import PrettyPrint
-from tcp_exceptions import NoTCPTransactions
 
 
 pcap_file = "/Users/dhavalbagal/Documents/GitHub/tcp-packet-analysis/assignment2.pcap"
@@ -15,7 +12,7 @@ cwnd_sizes = TCPPCapAnalyzer.congestion_window_sizes(analysis.tcp_connections, s
 
 for i,conn_cwnd_sizes in enumerate(cwnd_sizes):
     print(f"Connection {i+1}:")
-    [print(x) for x in conn_cwnd_sizes[0:10]]
+    [print(x) for x in conn_cwnd_sizes[1:11]]
 
 
 for i in range(len(analysis.tcp_connections)):

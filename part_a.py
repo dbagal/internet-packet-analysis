@@ -12,7 +12,7 @@ analysis = TCPPCapAnalyzer.process_pcap(pcap_file=pcap_file, src_ip=src_ip, dst_
 
 for connection in analysis.tcp_connections:
 
-    num_transactions_to_print = 5
+    num_transactions_to_print = 10
     try:
         PrettyPrint.print_in_tabular_format(
             dataset = [[segment.src_ip, segment.dst_ip, segment.seq_num, segment.ack_num, segment.payload_size, segment.win_size, segment.flags.syn, segment.flags.ack] \

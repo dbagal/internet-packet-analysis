@@ -89,8 +89,8 @@ class TCPSegment:
         self.win_size = int.from_bytes(segment_bytes[14:16], "big", signed=False)
         self.checksum = int.from_bytes(segment_bytes[16:18], "big", signed=False)
         self.urgent_ptr = int.from_bytes(segment_bytes[18:20], "big", signed=False)
-        self.payload = segment_bytes[60:1460]
-        self.payload_size = len(segment_bytes[60:1460])
+        self.payload = segment_bytes[60:]
+        self.payload_size = len(segment_bytes[60:])
         self.timestamp = float(ts)
 
 
@@ -264,6 +264,8 @@ class TCPPCapAnalyzer:
             cwnd_sizes = []
             latest_seq_num_sent = None
             for segment in connection.segments:
+                # congestion window is the amount of data the TCP can send into the network 
+                # before receiving an ACK
                 if segment.src_ip == src_ip and segment.dst_ip == dst_ip:
                     latest_seq_num_sent = segment.seq_num
                 elif segment.dst_ip == src_ip and segment.dst_ip == src_ip and latest_seq_num_sent is not None:
