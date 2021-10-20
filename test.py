@@ -1,26 +1,48 @@
-def get_bits(bytes):
-    bits = []
-    for byte in bytes:
-        for i in range(7,-1,-1):
-            bits.append((byte>>i)&1)
+import re
 
-    return bits
+pat = r'''GET (.*) HTTP/([0-9].[0-9])
+Host: ([^\n]+)
+User-Agent: ([^\n]+)
+Accept: ([^\n]+)
+Accept-Language: ([^\n]+)
+Accept-Encoding: ([^\n]+)
+Referer: ([^\n]+)
+Connection: ([^\n]+)
+Upgrade-Insecure-Requests: ([^\n]+)
+If-Modified-Since: ([^\n]+)
+If-None-Match: ([^\n]+)\nCache-Control: ([^\n]+).*'''
 
 
-integer_val = 5
-bytes_val = integer_val.to_bytes(2, 'big')
+pat = r'(?:(?:([\w-]+):([^\n]+))\n)+'
+#pat = r'Host: ([^\n]+)\nUser-Agent: ([^\n]+)\nAccept: ([^\n]+)\nAccept-Language: ([^\n]+)\nAccept-Encoding: (?:(\w+),*).*'
 
-print(get_bits(bytes_val))
+pat = re.compile(pat)
 
-a = {(1,2):[1,2,3], (2,1):[4,5,6], (4,5):[7,8,9]}
-b = dict()
-v = []
+string = """
+GET /home.html HTTP/1.1
+Host: developer.mozilla.org
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: https://developer.mozilla.org/testpage.html
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+If-Modified-Since: Mon, 18 Jul 2016 02:36:04 GMT
+If-None-Match: "c561c68d0ba92bbeb8b0fff2a9199f722e3a621a"
+Cache-Control: max-age=0
+"""
 
-for x,_ in a.items():
-    if (x[0], x[1]) not in v or (x[1], x[0]) not in v:
-        v += [(x[0], x[1])]
-        b[x] = a[x]
+string3 = """
+Host: developer.mozilla.org
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+"""
 
-print(b)
+#print(string)
 
+for grp in pat.search(string).groups():
+    print(grp)
 

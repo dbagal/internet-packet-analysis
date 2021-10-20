@@ -67,7 +67,7 @@ class TCPSegment:
             f"urgent-ptr: {self.urgent_ptr}",
             f"payload-size: {self.payload_size} bytes",
             f"timestamp: {self.timestamp}",
-            f"base64-encoded-payload: {self.payload}"
+            f"base64-encoded-payload: {base64.b64encode(self.payload).decode()}"
         ]
         return get_string_representation(segment_contents)
 
@@ -89,7 +89,7 @@ class TCPSegment:
         self.win_size = int.from_bytes(segment_bytes[14:16], "big", signed=False)
         self.checksum = int.from_bytes(segment_bytes[16:18], "big", signed=False)
         self.urgent_ptr = int.from_bytes(segment_bytes[18:20], "big", signed=False)
-        self.payload = base64.b64encode(segment_bytes[60:1460]).decode()
+        self.payload = segment_bytes[60:1460]
         self.payload_size = len(segment_bytes[60:1460])
         self.timestamp = float(ts)
 
@@ -159,16 +159,13 @@ class TCPPCapAnalyzer:
             if isinstance(eth.data, dpkt.ip.IP):
                 ip = eth.data
 
-                packet_src_ip, packet_dst_ip = (socket.inet_ntoa(ip.src), socket.inet_ntoa(ip.dst))
+                packet_src_ip, packet_dst_ip = socket.inet_ntoa(ip.src), socket.inet_ntoa(ip.dst)
                 packet_addresses = {packet_src_ip, packet_dst_ip}
                 analysis_addresses = {src_ip, dst_ip}
-
+                
                 if isinstance(ip.data, dpkt.tcp.TCP) and packet_addresses==analysis_addresses:
-                    tcp_segments.append( (ts, bytes(ip.data)) )
+                    tcp_segments += [TCPSegment(segment=bytes(ip.data), src_ip=packet_src_ip, dst_ip=packet_dst_ip, ts=ts)]
         
-        tcp_segments = [TCPSegment(segment=segment, src_ip=packet_src_ip, dst_ip=packet_dst_ip, ts=ts) \
-                for ts,segment in tcp_segments]
-
         return tcp_segments
 
         
@@ -194,11 +191,11 @@ class TCPPCapAnalyzer:
 
 
     @staticmethod
-    def get_theoretical_throughput(connections):
+    def get_theoretical_throughput(connections, src_ip, dst_ip):
         def theoretical_throughput(rtt, loss_rate):
             return round((1.31 * (1460/1048576))/(rtt * loss_rate**0.5),4)
 
-        loss_rates = TCPPCapAnalyzer.get_loss_rate(connections=connections)
+        loss_rates = TCPPCapAnalyzer.get_loss_rate(connections=connections, src_ip=src_ip, dst_ip=dst_ip)
         rtts = TCPPCapAnalyzer.get_rtt(connections=connections)
 
         throughputs = [theoretical_throughput(rtt, loss_rate) for rtt,loss_rate in zip(rtts,loss_rates)]
@@ -207,12 +204,17 @@ class TCPPCapAnalyzer:
 
 
     @staticmethod   
-    def get_loss_rate(connections):
+    def get_loss_rate(connections, src_ip, dst_ip):
         loss_rates=[]
         for connection in connections:
 
             num_transmissions = {seq_num:count for seq_num, count in \
-                                Counter([segment.seq_num for segment in connection.segments]).items()}
+                                Counter(
+                                        [   segment.seq_num 
+                                            for segment in connection.segments
+                                            if segment.src_ip == src_ip and segment.dst_ip == dst_ip
+                                        ]
+                                    ).items()}
             
             segments_lost = sum([num_transmitted-1 for num_transmitted in num_transmissions.values()])
 
@@ -253,3 +255,61 @@ class TCPPCapAnalyzer:
             rtts += [round(avg_rtt, 4)]
 
         return rtts
+
+    
+    @staticmethod
+    def congestion_window_sizes(connections, src_ip, dst_ip):
+        cwnd_sizes_for_connections = []
+        for connection in connections:
+            cwnd_sizes = []
+            latest_seq_num_sent = None
+            for segment in connection.segments:
+                if segment.src_ip == src_ip and segment.dst_ip == dst_ip:
+                    latest_seq_num_sent = segment.seq_num
+                elif segment.dst_ip == src_ip and segment.dst_ip == src_ip and latest_seq_num_sent is not None:
+                    cwnd_size = latest_seq_num_sent - segment.ack_num
+                    cwnd_sizes += [cwnd_size]
+            
+            cwnd_sizes_for_connections += [cwnd_sizes]
+        return cwnd_sizes_for_connections
+
+    
+    @staticmethod
+    def num_retransmissions(connections, src_ip, dst_ip):
+
+        retransmissions = []
+        for connection in connections:
+            
+            # packets with ack flag set should come from server
+            # hence src_ip should be server's ip and dst_ip should be client's ip
+            transmissions_for_ack_num = {ack_num:count 
+                                            for ack_num, count in 
+                                            Counter([
+                                                        segment.ack_num 
+                                                        for segment in connection.segments
+                                                        if segment.src_ip == dst_ip and segment.dst_ip == src_ip
+                                                    ]).items() 
+                                            if count>=3}
+
+            retransmissions_for_seq_num = {seq_num:count-1 
+                                            for seq_num, count in 
+                                            Counter([
+                                                        segment.seq_num 
+                                                        for segment in connection.segments
+                                                        if segment.src_ip == src_ip and segment.dst_ip == dst_ip
+                                                    ]).items()
+                                        }
+
+            
+            total_retransmissions = sum([num_transmitted for num_transmitted in retransmissions_for_seq_num.values()])
+            
+            retransmits_due_to_triple_dup_ack = 0
+            for ack_num in transmissions_for_ack_num.keys():
+                retransmits_due_to_triple_dup_ack += retransmissions_for_seq_num.get(ack_num,0)
+            
+            retransmits_due_to_timeout = total_retransmissions - retransmits_due_to_triple_dup_ack
+            retransmissions += [(retransmits_due_to_triple_dup_ack, retransmits_due_to_timeout, total_retransmissions)]
+        
+        return retransmissions
+            
+            
