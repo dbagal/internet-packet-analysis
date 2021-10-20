@@ -89,9 +89,10 @@ class TCPSegment:
         self.win_size = int.from_bytes(segment_bytes[14:16], "big", signed=False)
         self.checksum = int.from_bytes(segment_bytes[16:18], "big", signed=False)
         self.urgent_ptr = int.from_bytes(segment_bytes[18:20], "big", signed=False)
-        self.payload = segment_bytes[60:]
-        self.payload_size = len(segment_bytes[60:])
+        self.payload = segment_bytes[20:]
+        self.payload_size = len(segment_bytes[20:])
         self.timestamp = float(ts)
+        self.bytes = segment_bytes
 
 
 
@@ -160,12 +161,16 @@ class TCPPCapAnalyzer:
                 ip = eth.data
 
                 packet_src_ip, packet_dst_ip = socket.inet_ntoa(ip.src), socket.inet_ntoa(ip.dst)
-                packet_addresses = {packet_src_ip, packet_dst_ip}
-                analysis_addresses = {src_ip, dst_ip}
+                if isinstance(ip.data, dpkt.tcp.TCP):
+                    if src_ip is not None and dst_ip is not None:
+                        
+                        packet_addresses = {packet_src_ip, packet_dst_ip}
+                        analysis_addresses = {src_ip, dst_ip}
+                        if packet_addresses==analysis_addresses:
+                            tcp_segments += [TCPSegment(segment=bytes(buf[34:]), src_ip=packet_src_ip, dst_ip=packet_dst_ip, ts=ts)]
+                    else:
+                        tcp_segments += [TCPSegment(segment=bytes(buf[34:]), src_ip=packet_src_ip, dst_ip=packet_dst_ip, ts=ts)]
                 
-                if isinstance(ip.data, dpkt.tcp.TCP) and packet_addresses==analysis_addresses:
-                    tcp_segments += [TCPSegment(segment=bytes(ip.data), src_ip=packet_src_ip, dst_ip=packet_dst_ip, ts=ts)]
-        
         return tcp_segments
 
         
@@ -243,7 +248,7 @@ class TCPPCapAnalyzer:
                 ack_num = segment.ack_num
 
                 # for every unique ack number, find a unique seq number which is same as the ack number
-                ts1_list = seq_indexed_segments.get(ack_num, None)
+                ts1_list = seq_indexed_segments.get(ack_num-1, None)
                 ts2_list = ack_indexed_segments.get(ack_num, None)
 
                 # don't sample rtt for retransmissions
@@ -313,5 +318,3 @@ class TCPPCapAnalyzer:
             retransmissions += [(retransmits_due_to_triple_dup_ack, retransmits_due_to_timeout, total_retransmissions)]
         
         return retransmissions
-            
-            

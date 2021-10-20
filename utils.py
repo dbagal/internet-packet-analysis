@@ -1,8 +1,12 @@
 import logging
 import datetime
 import os
+import struct
 
 ROOT_FOLDER = ""
+
+def unpack(fmt, buf):
+    return struct.unpack(fmt, buf)[0]
 
 def get_bits(bytes, byteorder="big"):
         bits = []
@@ -15,14 +19,6 @@ def get_bits(bytes, byteorder="big"):
             bits += [(byte>>i)&1 for i in bit_indices]
 
         return bits
-
-def log(fname, msg):
-    fname = os.path.join(ROOT_FOLDER, f"logs/{fname}.log")
-    logging.basicConfig(filename=fname, level=logging.INFO)
-    current_ts = datetime.datetime.now().strftime("%m-%d-%Y::%H:%M:%S")
-    msg = current_ts+"::"+msg
-    logging.info(msg+"\n")
-    print("\n",msg,"\n")
 
 
 def get_string_representation(contents):
