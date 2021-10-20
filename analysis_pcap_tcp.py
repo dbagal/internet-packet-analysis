@@ -5,6 +5,15 @@ import os
 import base64
 from collections import defaultdict, Counter
 
+
+
+class NoTCPTransactions(Exception):
+    def __init__(self):
+        msg = f"No transactions exist after connection setup!"
+        super().__init__(msg)
+
+
+
 class TCPSegment:
 
     class TCPFlags:
@@ -112,13 +121,18 @@ class TCPPCapAnalyzer:
         - analysis:     TCPPCapAnalyzer.TCPPCapComponents object containing the components required for analysis
         """
         # to speed up processing, the components required for the analysis are stored in a pickle file
-        analysis_components = pcap_file.split(".pcap")[0] + "-analysis.pkl"
-
+        root_path = "./"
+        analysis_folder = os.path.join(root_path, "analysis_components")
+        analysis_components = os.path.join(analysis_folder, os.path.basename(pcap_file).split(".pcap")[0] + "-analysis.pkl")
+        
         if os.path.exists(analysis_components):
             with open(analysis_components, 'rb') as fp:
                 analysis = pickle.load(fp)
         else:
             analysis = TCPPCapAnalyzer.TCPPCapComponents(pcap_file, src_ip, dst_ip)
+            if not os.path.exists(analysis_folder):
+                os.makedirs(analysis_folder)
+
             with open(analysis_components, 'wb') as fp:
                 pickle.dump(analysis, fp)
 

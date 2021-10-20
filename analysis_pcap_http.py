@@ -7,11 +7,18 @@ class HTTPPCapAnalyzer:
 
     @staticmethod
     def get_http_packet_type(tcp_payload):
+        """  
+        @params:
+        - tcp_payload:  tcp payload bytes starting from 20th byte (options field + data payload) 
+
+        @returns:
+        - type of http packet header or None if no  matches
+        """
+        # within a tcp packet, the strings GET and HTTP to identify the type of http header
+        # occurs from 12th byte
         if len(tcp_payload)>12:
 
-            chars = []
-            for i in range(12,16):
-                chars += [unpack(">s", tcp_payload[i:i+1])]
+            chars = [unpack(">s", tcp_payload[i:i+1]) for i in range(12,16)]
 
             initial_chars = ""
             for i in range(len(chars)):
@@ -30,6 +37,15 @@ class HTTPPCapAnalyzer:
 
     @staticmethod
     def reassemble_http_non_pipelined_request_responses(connections):
+        """  
+        @params:
+        - connections:      list of TCPPCapAnalyzer.TCPConnection objects containing the 
+                            addresses of the two nodes and the packets sent between them.
+        
+        @returns:
+        - reassembled_req_response:    list of the format [ [request1, [response-1, response-2, ...]], 
+                                                            [request2, [...]] ]
+        """
         reassembled_req_response = []
         for connection in connections:
             http_packets = []
