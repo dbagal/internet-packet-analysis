@@ -1,7 +1,7 @@
 class PrettyPrint():
 
     @staticmethod
-    def print_in_tabular_format(dataset, headers, include_serial_numbers = True, col_guetter = 4):
+    def print_in_tabular_format(dataset, headers, include_serial_numbers = True, col_guetter = 4, serial_num_heading = "Sr.No", table_header=None):
 
         class InconsistentDataAndHeaderError(Exception):
             def __init__(self):
@@ -14,7 +14,6 @@ class PrettyPrint():
                 super().__init__(msg)
 
         column_lens = []
-        serial_num_heading = "Sr.No"
         num_columns = len(headers)
         num_rows = len(dataset)
 
@@ -32,7 +31,7 @@ class PrettyPrint():
             max_col_len = 0
             for row_num in range(num_rows):
                 # raise error on non-primitive data field values
-                if type(dataset[row_num][col_num]) not in (str, int, bool):
+                if type(dataset[row_num][col_num]) not in (str, int, bool, float):
                     raise NonPrimitiveDataError()
                 
                 # convert all primitive values to string
@@ -50,9 +49,14 @@ class PrettyPrint():
 
         table_width = len(formatted_header) - (col_guetter//2)
 
-        print ("="*table_width)
+        print()
+        print("="*(table_width))
+        if table_header:
+            print("|"+table_header.center(table_width-2)+"|")
+            print("|"+"-"*(table_width-2)+"|")
         print(formatted_header)
-        print("="*table_width)
+        
+        print("|"+"="*(table_width-2)+"|")
 
         for data_row in dataset:
             row = "|"+ " "*(col_guetter//2)
@@ -60,7 +64,7 @@ class PrettyPrint():
                 row += "{:<"+str(col_len+col_guetter//2)+"}|" + " "*(col_guetter//2)
             print (row.format(*data_row))
 
-        print("="*table_width)
+        print("="*(table_width), "\n")
 
 """ 
 d = [ ["Mark", 12, 95],

@@ -14,7 +14,7 @@ analysis = TCPPCapAnalyzer.process_pcap(pcap_file=pcap_files[0], src_ip=None, ds
 request_responses = HTTPPCapAnalyzer.reassemble_http_non_pipelined_request_responses(analysis.tcp_connections)
 
 for i,connection in enumerate(request_responses):
-    print(f"\nCONNECTION {i+1}:\n")
+    
     for connection_packets in connection:
         request = connection_packets[0]
         src = f"{request.src_ip}:{request.src_port}"
@@ -34,5 +34,6 @@ for i,connection in enumerate(request_responses):
         
         PrettyPrint.print_in_tabular_format(
             dataset = dataset,
-            headers = ["PACKET-TYPE", "SRC", "DST", "SEQ-NUM", "ACK-NUM"]
+            headers = ["PACKET-TYPE", "SRC", "DST", "SEQ-NUM", "ACK-NUM"],
+            table_header = f"CONNECTION {i+1}"
         )

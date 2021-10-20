@@ -1,17 +1,14 @@
 import dpkt
 import pickle
-from utils import unpack
-from utils import get_string_representation, get_bits
+from utils import get_string_representation, get_bits, unpack
 import os
 import base64
-import socket
 from collections import defaultdict, Counter
 
 class TCPSegment:
 
     class TCPFlags:
         def __init__(self, flags) -> None:
-
             self.ns = flags[0]
             self.cwr = flags[1]
             self.ece = flags[2]
@@ -22,24 +19,31 @@ class TCPSegment:
             self.syn = flags[7]
             self.fin = flags[8]
 
-        def __str__(self) -> str:
-            flags = [
-                f"TCP segment FLAGS",
-                f"- ns: {self.ns}",
-                f"- cwr: {self.cwr}",
-                f"- ece: {self.ece}",
-                f"- urg: {self.urg}",
-                f"- ack: {self.ack}",
-                f"- psh: {self.psh}",
-                f"- rst: {self.rst}",
-                f"- syn: {self.syn}",
-                f"- fin: {self.fin}",
-            ]
-            return get_string_representation(flags)
 
-
-    def __init__(self, segment, src_ip, dst_ip, ts):
-        self.process_segment(segment, src_ip, dst_ip, ts)
+    def __init__(self, segment_bytes, src_ip, dst_ip, ts):
+        """  
+        @params:
+        - segment_bytes:    ip packet's payload, i.e tcp segment bytes
+        - src_ip:           ip of the sender of interest
+        - dst_ip:           ip of the receiver of interest
+        - ts:               timestamp in the pcap file when the packet was captured
+        """
+        self.src_ip = src_ip
+        self.dst_ip = dst_ip
+        self.src_port = int.from_bytes(segment_bytes[0:2], "big", signed=False)
+        self.dst_port = int.from_bytes(segment_bytes[2:4], "big", signed=False)
+        self.seq_num = int.from_bytes(segment_bytes[4:8], "big", signed=False)
+        self.ack_num = int.from_bytes(segment_bytes[8:12], "big", signed=False)
+        control_fields = get_bits(segment_bytes[12:14])
+        self.data_offset = int("".join([str(x) for x in control_fields[0:4]]), 2)
+        self.reserved = int("".join([str(x) for x in control_fields[4:7]]), 2)
+        self.flags =  TCPSegment.TCPFlags(control_fields[-9:])
+        self.win_size = int.from_bytes(segment_bytes[14:16], "big", signed=False)
+        self.checksum = int.from_bytes(segment_bytes[16:18], "big", signed=False)
+        self.urgent_ptr = int.from_bytes(segment_bytes[18:20], "big", signed=False)
+        self.payload = segment_bytes[20:]
+        self.payload_size = len(segment_bytes[20:])
+        self.timestamp = float(ts)
 
 
     def __str__(self):
@@ -73,62 +77,49 @@ class TCPSegment:
         return get_string_representation(segment_contents)
 
 
-    def process_segment(self, internet_packet, src_ip, dst_ip, ts):
-        self.src_ip = src_ip
-        self.dst_ip = dst_ip
-        self.src_port = int(unpack(">H", internet_packet[0:2])) 
-        self.dst_port = int(unpack(">H", internet_packet[2:4]))
-        self.seq_num = int(unpack(">I", internet_packet[4:8]))
-        self.ack_num = int(unpack(">I", internet_packet[8:12]))
-        data_offset_and_reserved_and_flags = get_bits(bytes(int(unpack(">H", internet_packet[12:14]))))
-        self.data_offset = int("".join([str(x) for x in data_offset_and_reserved_and_flags[0:4]]), 2)
-        self.reserved = int("".join([str(x) for x in data_offset_and_reserved_and_flags[4:7]]), 2)
-        
-        flags = data_offset_and_reserved_and_flags[-9:]
-        self.flags =  TCPSegment.TCPFlags(flags)
-
-        self.win_size = int(unpack(">H", internet_packet[14:16]))
-        self.checksum = int(unpack(">H", internet_packet[16:18]))
-        self.urgent_ptr = int(unpack(">H", internet_packet[18:20]))
-        self.mss = int(unpack(">H", internet_packet[22:24]))
-        self.header_size = int(unpack(">B", internet_packet[12:13]))
-
-        self.payload = internet_packet[30:]
-        self.payload_size = len(internet_packet[30:])
-        self.timestamp = float(ts)
-
-
 
 class TCPPCapAnalyzer:
 
 
     class TCPConnection:
-
         def __init__(self, addr1, addr2) -> None:
             self.addr1 = addr1
             self.addr2 = addr2
             self.segments = []
-    
 
 
     class TCPPCapComponents:
-
-        def __init__(self, pcap_file, src_ip, dst_ip) -> None:
-            self.tcp_segments = TCPPCapAnalyzer.get_tcp_segments(pcap_file, src_ip, dst_ip)
-            self.tcp_connections = TCPPCapAnalyzer.get_tcp_connection_segments(self.tcp_segments)
-
-
+            def __init__(self, pcap_file, src_ip, dst_ip) -> None:
+                """  
+                @params:
+                - pcap_file:    path to the pcap file to be analysed
+                - src_ip:       ip of the sender of interest
+                - dst_ip:       ip of the receiver of interest
+                """
+                self.tcp_segments = TCPPCapAnalyzer.get_tcp_segments(pcap_file, src_ip, dst_ip)
+                self.tcp_connections = TCPPCapAnalyzer.get_tcp_connection_segments(self.tcp_segments)
+    
 
     @staticmethod
     def process_pcap(pcap_file, src_ip, dst_ip):
-        analysis_file = pcap_file.split(".pcap")[0] + "-analysis.pkl"
+        """  
+        @params:
+        - pcap_file:    path to the pcap file to be analysed
+        - src_ip:       ip of the sender of interest
+        - dst_ip:       ip of the receiver of interest
 
-        if os.path.exists(analysis_file) and False:
-            with open(analysis_file, 'rb') as fp:
+        @returns:
+        - analysis:     TCPPCapAnalyzer.TCPPCapComponents object containing the components required for analysis
+        """
+        # to speed up processing, the components required for the analysis are stored in a pickle file
+        analysis_components = pcap_file.split(".pcap")[0] + "-analysis.pkl"
+
+        if os.path.exists(analysis_components):
+            with open(analysis_components, 'rb') as fp:
                 analysis = pickle.load(fp)
         else:
             analysis = TCPPCapAnalyzer.TCPPCapComponents(pcap_file, src_ip, dst_ip)
-            with open(analysis_file, 'wb') as fp:
+            with open(analysis_components, 'wb') as fp:
                 pickle.dump(analysis, fp)
 
         return analysis
@@ -136,13 +127,26 @@ class TCPPCapAnalyzer:
 
     @staticmethod
     def get_tcp_connection_segments(tcp_segments):
+        """  
+        @params:
+        - tcp_segments:    list of TCPSegment objects
+
+        @returns:
+        - connections:      list of TCPPCapAnalyzer.TCPConnection objects containing the 
+                            addresses of the two nodes and the packets sent between them.
+        """
         connections = []
 
         for tcp_segment in tcp_segments:
+
+            # on second handshake, consider the connection to be established and 
+            # create and append a TCPConnection object to connections
             if tcp_segment.flags.syn==1 and tcp_segment.flags.ack==1:
                 connections += [ TCPPCapAnalyzer.TCPConnection( addr1 = tcp_segment.src_port, 
                                                                 addr2 = tcp_segment.dst_port) ]
 
+        # traverse all the segments and populate the 'segments' field in every connection 
+        # with the segments having same addresses as in the connection
         for tcp_segment in tcp_segments:
             for i, connection in enumerate(connections):
                 connection_addresses = {connection.addr1, connection.addr2}
@@ -156,41 +160,72 @@ class TCPPCapAnalyzer:
 
     @staticmethod
     def get_tcp_segments(pcap_file, src_ip, dst_ip):
+        """  
+        @params:
+        - pcap_file:    path to the pcap file to be analysed
+        - src_ip:       ip of the sender of interest
+        - dst_ip:       ip of the receiver of interest
+
+        @returns:
+        - tcp_segments: list of TCPSegment objects containing the tcp segment from each packet captured in the pcap file
+        """
         tcp_segments = []
         pcap = dpkt.pcap.Reader(open(pcap_file, "rb"))
-        c = 0
+
+        # traverse every packet captured in the pcap
         for ts, buf in pcap:
-            c += 1
-            if c%100==0:
-                print(c)
+
             eth = dpkt.ethernet.Ethernet(buf)
+
+            # consider only TCP/IP packets for analysis
             if isinstance(eth.data, dpkt.ip.IP):
                 ip = eth.data
 
-                packet_src_ip, packet_dst_ip = socket.inet_ntoa(ip.src), socket.inet_ntoa(ip.dst)
-                packet_addresses = {packet_src_ip, packet_dst_ip}
-                analysis_addresses = {src_ip, dst_ip}
+                packet_src_ip = ".".join([ str(unpack(">B", buf[i:i+1])) for i in range(26,30) ])
+                packet_dst_ip = ".".join([ str(unpack(">B", buf[i:i+1])) for i in range(30,34) ])
+
+                if isinstance(ip.data, dpkt.tcp.TCP):
+                    if src_ip is not None and dst_ip is not None:
+                        
+                        # process packets only between nodes having src_ip and dst_ip addresses
+                        packet_addresses = {packet_src_ip, packet_dst_ip}
+                        analysis_addresses = {src_ip, dst_ip}
+
+                        if packet_addresses==analysis_addresses:
+                            tcp_segments += [TCPSegment(segment_bytes=bytes(buf[34:]), src_ip=packet_src_ip, dst_ip=packet_dst_ip, ts=ts)]
+                    else:
+                        # process any packet without checking the address field
+                        tcp_segments += [TCPSegment(segment_bytes=bytes(buf[34:]), src_ip=packet_src_ip, dst_ip=packet_dst_ip, ts=ts)]
                 
-                if isinstance(ip.data, dpkt.tcp.TCP) and packet_addresses==analysis_addresses:
-                    tcp_segments += [TCPSegment(segment=buf[34:], src_ip=packet_src_ip, dst_ip=packet_dst_ip, ts=ts)]
-                    
         return tcp_segments
 
         
     @staticmethod
     def get_empirical_throughput(connections):
-        throughputs = []
+        """  
+        @params:
+        - connections:      list of TCPPCapAnalyzer.TCPConnection objects containing the 
+                            addresses of the two nodes and the packets sent between them.
+        
+        @returns:
+        - empirical_throughputs:    list of floats representing empirical throughputs for each connection
+        """
+        empirical_throughputs = []
         for connection in connections:
+
+            # sum up the payload size for all packets in the connection
             payload_size = sum([segment.payload_size for segment in connection.segments])
 
-            start_time = min([float(transaction_segment.timestamp) for transaction_segment in connection.segments])
-            end_time = max([float(transaction_segment.timestamp) for transaction_segment in connection.segments])
-            
+            # record the timestamps
+            start_time = connection.segments[0].timestamp 
+            end_time = connection.segments[-1].timestamp 
             time_taken = end_time - start_time
-            throughput = round( (payload_size/1048576)/time_taken , 4 )
-            throughputs += [throughput]
 
-        return throughputs
+            # throughput = total_bytes_sent / time_taken
+            throughput = round( (payload_size/1048576)/time_taken , 4 )
+            empirical_throughputs += [throughput]
+
+        return empirical_throughputs
 
     
     @staticmethod
@@ -200,13 +235,14 @@ class TCPPCapAnalyzer:
 
     @staticmethod
     def get_theoretical_throughput(connections, src_ip, dst_ip):
-        def theoretical_throughput(rtt, loss_rate):
-            return round((1.31 * (1460/1048576))/(rtt * loss_rate**0.5),4)
-
+        
         loss_rates = TCPPCapAnalyzer.get_loss_rate(connections=connections, src_ip=src_ip, dst_ip=dst_ip)
         rtts = TCPPCapAnalyzer.get_rtt(connections=connections)
 
-        throughputs = [theoretical_throughput(rtt, loss_rate) for rtt,loss_rate in zip(rtts,loss_rates)]
+        throughputs = [
+                        round((1.31 * (1460/1048576))/(rtt/1000 * loss_rate**0.5),4) 
+                        for rtt,loss_rate in zip(rtts,loss_rates)
+                    ]
         
         return throughputs
 
@@ -238,7 +274,7 @@ class TCPPCapAnalyzer:
         for connection in connections:
 
             avg_rtt = 0
-            alpha = 0.05
+            alpha = 0.0125
 
             seq_indexed_segments = defaultdict(list)
             ack_indexed_segments = defaultdict(list)
@@ -255,12 +291,11 @@ class TCPPCapAnalyzer:
                 ts2_list = ack_indexed_segments.get(ack_num, None)
 
                 # don't sample rtt for retransmissions
-                if ts1_list is not None and ts2_list is not None and \
-                    len(ts1_list)==1 and len(ts2_list)==1:
-                    rtt_sample = abs(ts1_list[0] - ts2_list[0])
+                if ts1_list is not None and ts2_list is not None and len(ts1_list)==1 and len(ts2_list)==1:
+                    rtt_sample = abs(ts2_list[0] - ts1_list[0])
                     avg_rtt = (1-alpha)*avg_rtt + alpha*rtt_sample
 
-            rtts += [round(avg_rtt, 4)]
+            rtts += [round(avg_rtt*1000, 4)]
 
         return rtts
 
@@ -321,5 +356,3 @@ class TCPPCapAnalyzer:
             retransmissions += [(retransmits_due_to_triple_dup_ack, retransmits_due_to_timeout, total_retransmissions)]
         
         return retransmissions
-            
-            
