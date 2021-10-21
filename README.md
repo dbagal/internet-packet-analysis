@@ -14,10 +14,13 @@ This project implements a pcap file parser to parse tcp segments and analyse the
 # Project structure
 
 - **analysis_components/:** Folder containing processed pcap files serialized and stored in pickle format
-- **PartA/part_a.py:** Analysis for part A
-- **PartA/part_b.py:** Analysis for part B
-- **PartA/part_c.py:** Analysis for part C
-- **PartA/part_d.txt:** Analysis for part D
+- **PartA/part_a.py:** Analysis program for part A
+- **PartB/part_b.py:** Analysis program for part B
+- **PartC/part_c.py:** Analysis program for part C
+- **PartA/part_a.txt:** Analysis for part A
+- **PartB/part_b.txt:** Analysis for part B
+- **PartC/part_c.txt:** Analysis for part C
+- **PartD/part_d.txt:** Analysis for part D
 - **pcap/:** Folder which stores all the pcap files used in the analysis
 - **analysis_pcap_tcp.py** Provides classes to analyze tcp segments in the pcap files
 - **analysis_pcap_http.py:** Provides classes to analyze http packets in the pcap files
