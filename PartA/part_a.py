@@ -9,7 +9,7 @@ from utils import PrettyPrint
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 root_path = os.path.dirname(current_dir)
-pcap_file = os.path.join(root_path, "assignment2.pcap")
+pcap_file = os.path.join(root_path, "pcap", "assignment2.pcap")
 src_ip, dst_ip = "130.245.145.12", "128.208.2.198"
 
 # get analysis components

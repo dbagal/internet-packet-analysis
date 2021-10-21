@@ -15,9 +15,9 @@ from utils import PrettyPrint
 current_dir = os.path.dirname(os.path.realpath(__file__))
 root_path = os.path.dirname(current_dir)
 pcap_files = [
-    os.path.join(root_path, "http_1080.pcap"),
-    os.path.join(root_path, "tcp_1081.pcap"),
-    os.path.join(root_path, "tcp_1082.pcap")
+    os.path.join(root_path, "pcap", "http_1080.pcap"),
+    os.path.join(root_path, "pcap", "tcp_1081.pcap"),
+    os.path.join(root_path, "pcap", "tcp_1082.pcap")
 ]
 
 # get analysis component for the first file
