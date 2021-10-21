@@ -21,10 +21,10 @@ pcap_files = [
 ]
 
 # get analysis component for the first file
-analysis = TCPPCapAnalyzer.process_pcap(pcap_file=pcap_files[0], src_ip=None, dst_ip=None)
+components = TCPPCapAnalyzer.process_pcap(pcap_file=pcap_files[0], src_ip=None, dst_ip=None)
 
 # get request and responses for http 1.0 file 
-request_responses = HTTPPCapAnalyzer.reassemble_http_non_pipelined_request_responses(analysis.tcp_connections)
+request_responses = HTTPPCapAnalyzer.reassemble_http_non_pipelined_request_responses(components.tcp_connections)
 
 for i,connection in enumerate(request_responses):
     

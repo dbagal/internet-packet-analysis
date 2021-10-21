@@ -1,0 +1,4 @@
+dpkt==1.9.7.2
+pickle
+base64
+struct

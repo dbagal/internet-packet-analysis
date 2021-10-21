@@ -14,6 +14,7 @@ src_ip, dst_ip = "130.245.145.12", "128.208.2.198"
 
 # get analysis components
 components = TCPPCapAnalyzer.process_pcap(pcap_file=pcap_file, src_ip=src_ip, dst_ip=dst_ip)
+print(components.tcp_segments[0])
 
 # print transactions after tcp setup for each connection
 for i, connection in enumerate(components.tcp_connections):
