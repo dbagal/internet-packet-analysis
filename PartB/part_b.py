@@ -17,10 +17,32 @@ retransmissions = TCPPCapAnalyzer.num_retransmissions(components.tcp_connections
 cwnd_sizes = TCPPCapAnalyzer.congestion_window_sizes(components.tcp_connections, src_ip=src_ip, dst_ip=dst_ip)
 
 table = PrettyPrint.get_tabular_formatted_string(
-    dataset = [conn_cwnd_sizes[1:11] for conn_cwnd_sizes in cwnd_sizes],
-    headers = ["CW1", "CW2", "CW3", "CW4", "CW5", "CW6", "CW7", "CW8", "CW9", "CW10"],
-    serial_num_heading="CONN #",
+    dataset = list(map(list, zip(*[conn_cwnd_sizes[1:11] for conn_cwnd_sizes in cwnd_sizes]))),
+    headers = ["C1", "C2", "C3"],
+    serial_num_heading="CWND #",
     table_header="CONGESTION WINDOW SIZES"
+)
+print(table)
+
+dataset = []
+for conn_cwnd_sizes in cwnd_sizes:
+    row = [conn_cwnd_sizes[1]]
+    for i in range(2,11):
+        scaling_factor = round(conn_cwnd_sizes[i]/conn_cwnd_sizes[i-1], 2)
+        if scaling_factor<1:
+            percentage = "-"+str(round((1-scaling_factor)*100,2))+"%"
+        else:
+            percentage = "+"+str(round((scaling_factor-1)*100, 2))+"%"
+
+        row += [percentage]
+    dataset += [row]
+dataset = list(map(list, zip(*dataset)))
+
+table = PrettyPrint.get_tabular_formatted_string(
+    dataset = dataset,
+    headers = ["C1", "C2", "C3"],
+    serial_num_heading="CWND",
+    table_header="CWND SCALING FACTORS"
 )
 print(table)
 

@@ -21,10 +21,10 @@ pcap_files = [
 ]
 
 # get analysis component for the first file
-components = TCPPCapAnalyzer.process_pcap(pcap_file=pcap_files[0], src_ip=None, dst_ip=None)
+http_1_analysis = TCPPCapAnalyzer.process_pcap(pcap_file=pcap_files[0], src_ip=None, dst_ip=None)
 
 # get request and responses for http 1.0 file 
-request_responses = HTTPPCapAnalyzer.reassemble_http_non_pipelined_request_responses(components.tcp_connections)
+request_responses = HTTPPCapAnalyzer.reassemble_http_non_pipelined_request_responses(http_1_analysis.tcp_connections)
 
 for i,connection in enumerate(request_responses):
     
@@ -58,8 +58,32 @@ for i,connection in enumerate(request_responses):
 http_1_1_analysis = TCPPCapAnalyzer.process_pcap(pcap_file=pcap_files[1], src_ip=None, dst_ip=None)
 http_2_analysis = TCPPCapAnalyzer.process_pcap(pcap_file=pcap_files[2], src_ip=None, dst_ip=None)
 
+
+num_connections_http_1 = len(http_1_analysis.tcp_connections)
 num_connections_http_1_1 = len(http_1_1_analysis.tcp_connections)
 num_connections_http_2 = len(http_2_analysis.tcp_connections)
 
-print(f"# of connections in HTTP 1.1 file: {num_connections_http_1_1}")
-print(f"# of connections in HTTP 2.0 file: {num_connections_http_2}\n")
+num_packets_http_1 = len(http_1_analysis.tcp_segments)
+num_packets_http_1_1 = len(http_1_1_analysis.tcp_segments)
+num_packets_http_2 = len(http_2_analysis.tcp_segments)
+
+time_http_1 = round(http_1_analysis.tcp_segments[-1].timestamp - http_1_analysis.tcp_segments[0].timestamp, 4)
+time_http_1_1 = round(http_1_1_analysis.tcp_segments[-1].timestamp - http_1_1_analysis.tcp_segments[0].timestamp, 4)
+time_http_2 = round(http_2_analysis.tcp_segments[-1].timestamp - http_2_analysis.tcp_segments[0].timestamp, 4)
+
+print(http_1_analysis.tcp_segments[-1])
+print(http_1_analysis.tcp_segments[0])
+
+dataset = [
+    ["HTTP 1.0", num_connections_http_1, num_packets_http_1, str(time_http_1)+" ms"],
+    ["HTTP 1.1", num_connections_http_1_1, num_packets_http_1_1, str(time_http_1_1)+" ms"],
+    ["HTTP 2", num_connections_http_2, num_packets_http_2, str(time_http_2)+" ms"],
+]
+
+table = PrettyPrint.get_tabular_formatted_string(
+    dataset = dataset,
+    headers = ["HTTP-VERSION", "# CONNECTIONS", "# PACKETS SENT", "TIME TAKEN"],
+    table_header = f"HTTP VERSION ANALYSIS",
+    include_serial_numbers=False
+)
+print(table)

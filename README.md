@@ -17,16 +17,15 @@ This project implements a pcap file parser to parse tcp segments and analyse the
 - **PartA/part_a.py:** Analysis program for part A
 - **PartB/part_b.py:** Analysis program for part B
 - **PartC/part_c.py:** Analysis program for part C
-- **PartA/part_a.txt:** Analysis for part A
-- **PartB/part_b.txt:** Analysis for part B
-- **PartC/part_c.txt:** Analysis for part C
-- **PartD/part_d.txt:** Analysis for part D
+- **PartA/part_a.rtf:** Analysis for part A
+- **PartB/part_b.rtf:** Analysis for part B
+- **PartC/part_c.rtf:** Analysis for part C
+- **PartD/part_d.rtf:** Analysis for part D
 - **pcap/:** Folder which stores all the pcap files used in the analysis
 - **analysis_pcap_tcp.py** Provides classes to analyze tcp segments in the pcap files
 - **analysis_pcap_http.py:** Provides classes to analyze http packets in the pcap files
 - **utils.py:** Provides basic utilities for printing results and unpacking binary data from the pcap files
-- **performance-report.txt:** Contains the response times for all the top 25 sites using mydig resolver, local resolver and google's resolver
-- **documentation.pdf:** Documentation of the methods used for parsing and analysis
+- **documentation.pdf:** Documentation for the high level overview of analysis_pcap_tcp.py and analysis_pcap_http.py
 
 # Installation and setup
 

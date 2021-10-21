@@ -16,16 +16,18 @@ src_ip, dst_ip = "130.245.145.12", "128.208.2.198"
 components = TCPPCapAnalyzer.process_pcap(pcap_file=pcap_file, src_ip=src_ip, dst_ip=dst_ip)
 print(components.tcp_segments[0])
 
+print(f"# of TCP flows: {len(components.tcp_connections)}")
+
 # print transactions after tcp setup for each connection
 for i, connection in enumerate(components.tcp_connections):
 
     num_transactions_to_print = 5
     try:
         table = PrettyPrint.get_tabular_formatted_string(
-            dataset = [[ segment.seq_num, segment.ack_num, segment.win_size] \
+            dataset = [[ segment.seq_num, segment.ack_num, segment.win_size, segment.flags.syn, segment.flags.ack] \
                         for i, segment in enumerate(connection.segments) \
                         if i<num_transactions_to_print],
-            headers= [ "SEQ #", "ACK #", "WIN-SIZE"],
+            headers= [ "SEQ #", "ACK #", "WIN-SIZE", "SYN", "ACK"],
             table_header= f"CONNECTION {i+1}"
         )
         print(table)
