@@ -323,7 +323,7 @@ class TCPPCapAnalyzer:
             for segment in connection.segments:
                 ack_num = segment.ack_num
 
-                # for every unique ack number, find a unique seq number which is same as the ack number
+                # for every unique ack number, find a unique seq number which is one less than the ack number
                 req_sent_ts = seq_indexed_segments.get(ack_num-1, None)
                 response_received_ts = ack_indexed_segments.get(ack_num, None)
 

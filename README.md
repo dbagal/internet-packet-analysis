@@ -27,7 +27,9 @@ This project implements a pcap file parser to parse tcp segments and analyse the
 
 # Installation and setup
 
-```$ pip3 install -r requirements.txt```
+```
+$ pip3 install -r requirements.txt
+```
 
 # Usage
 
